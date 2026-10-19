@@ -545,3 +545,47 @@ if not results.empty:
         "Demo score based on CPU and memory utilization. "
         "It is not an official cloud-provider metric."
     )
+
+# Cloud Resource Waste Detection Chart
+st.header("📊 Cloud Resource Waste Detection")
+
+if not results.empty:
+    waste_data = results.copy()
+
+    waste_data["resource_status"] = waste_data.apply(
+        lambda row: (
+            "Underutilized"
+            if row["cpu_usage"] < 10 and row["memory_usage"] < 20
+            else "High Usage"
+            if row["cpu_usage"] > 90 or row["memory_usage"] > 90
+            else "Normal"
+        ),
+        axis=1
+    )
+
+    status_counts = (
+        waste_data["resource_status"]
+        .value_counts()
+        .reset_index()
+    )
+    status_counts.columns = ["Status", "Resource Count"]
+
+    st.bar_chart(
+        status_counts,
+        x="Status",
+        y="Resource Count"
+    )
+
+    st.subheader("Resources Requiring Attention")
+
+    attention = waste_data[
+        waste_data["resource_status"] != "Normal"
+    ]
+
+    st.dataframe(
+        attention[
+            ["resource_id", "cpu_usage", "memory_usage",
+             "resource_status"]
+        ],
+        use_container_width=True
+    )
