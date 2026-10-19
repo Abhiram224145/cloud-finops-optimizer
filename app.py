@@ -509,3 +509,39 @@ if "monthly_cost" in results.columns:
         "This alert uses the costs in your uploaded CSV. "
         "It is not connected to live cloud billing."
     )
+
+# Cloud Resource Optimization Score
+st.header("🎯 Cloud Resource Optimization Score")
+
+if not results.empty:
+    total_resources = len(results)
+
+    underutilized = (
+        (results["cpu_usage"] < 10) &
+        (results["memory_usage"] < 20)
+    ).sum()
+
+    optimized_resources = total_resources - underutilized
+    optimization_score = round(
+        (optimized_resources / total_resources) * 100, 2
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Total Resources", total_resources)
+    col2.metric("Underutilized Resources", int(underutilized))
+    col3.metric("Optimization Score", f"{optimization_score}%")
+
+    if optimization_score >= 80:
+        st.success("Good resource utilization!")
+    elif optimization_score >= 50:
+        st.warning("Some resources need optimization.")
+    else:
+        st.error("High resource waste detected.")
+
+    st.progress(optimization_score / 100)
+
+    st.caption(
+        "Demo score based on CPU and memory utilization. "
+        "It is not an official cloud-provider metric."
+    )
