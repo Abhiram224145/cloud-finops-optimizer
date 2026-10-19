@@ -300,3 +300,60 @@ st.download_button(
     file_name="cloud_finops_report.pdf",
     mime="application/pdf"
 )
+
+# Cloud Provider Cost Comparison
+st.subheader("Cloud Provider Cost Comparison")
+
+st.write(
+    "Compare illustrative cloud costs using the same estimated workload."
+)
+
+provider_rates = {
+    "AWS": 1.00,
+    "Microsoft Azure": 0.95,
+    "Google Cloud": 0.90
+}
+
+base_cost = float(total_cost)
+
+comparison_data = pd.DataFrame([
+    {
+        "Provider": provider,
+        "Estimated Monthly Cost (₹)": base_cost * rate
+    }
+    for provider, rate in provider_rates.items()
+])
+
+comparison_data["Estimated Annual Cost (₹)"] = (
+    comparison_data["Estimated Monthly Cost (₹)"] * 12
+)
+
+st.dataframe(
+    comparison_data.round(2),
+    use_container_width=True,
+    hide_index=True
+)
+
+fig_providers = px.bar(
+    comparison_data,
+    x="Provider",
+    y="Estimated Monthly Cost (₹)",
+    title="Estimated Monthly Cost by Cloud Provider",
+    text_auto=".2s"
+)
+
+st.plotly_chart(fig_providers, width="stretch")
+
+cheapest_provider = comparison_data.loc[
+    comparison_data["Estimated Monthly Cost (₹)"].idxmin()
+]
+
+st.success(
+    f"Lowest illustrative estimate: {cheapest_provider['Provider']} "
+    f"at ₹{cheapest_provider['Estimated Monthly Cost (₹)']:,.0f} per month."
+)
+
+st.caption(
+    "Demo estimates only. These multipliers are illustrative, "
+    "not actual AWS, Azure, or Google Cloud prices."
+)
