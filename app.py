@@ -425,3 +425,49 @@ if "recommendation" in results.columns:
     )
 else:
     st.warning("No recommendation column was found in the analysis results.")
+
+# Cloud Resource Search and Filter
+st.subheader("Cloud Resource Search and Filter")
+
+search_data = results.copy()
+
+search_text = st.text_input(
+    "Search by resource ID",
+    placeholder="Example: VM-01",
+    key="resource_search"
+)
+
+resource_types = (
+    search_data["resource_type"].dropna().unique().tolist()
+    if "resource_type" in search_data.columns
+    else []
+)
+
+selected_types = st.multiselect(
+    "Filter by resource type",
+    options=resource_types,
+    default=resource_types,
+    key="resource_type_filter"
+)
+
+filtered_data = search_data.copy()
+
+if search_text:
+    filtered_data = filtered_data[
+        filtered_data["resource_id"].astype(str).str.contains(
+            search_text, case=False, na=False
+        )
+    ]
+
+if "resource_type" in filtered_data.columns:
+    filtered_data = filtered_data[
+        filtered_data["resource_type"].isin(selected_types)
+    ]
+
+st.write(f"Matching resources: {len(filtered_data)}")
+
+st.dataframe(
+    filtered_data,
+    width="stretch",
+    hide_index=True
+)
