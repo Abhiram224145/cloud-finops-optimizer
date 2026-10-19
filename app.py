@@ -357,3 +357,71 @@ st.caption(
     "Demo estimates only. These multipliers are illustrative, "
     "not actual AWS, Azure, or Google Cloud prices."
 )
+
+# Interactive Optimization Recommendations
+st.subheader("Interactive Optimization Recommendations")
+
+if "recommendation" in results.columns:
+    recommendations = results.copy()
+
+    def get_priority(row):
+        rec = str(row.get("recommendation", "")).lower()
+        if "idle" in rec:
+            return "High"
+        elif "downsiz" in rec:
+            return "Medium"
+        return "Low"
+
+    recommendations["Priority"] = recommendations.apply(
+        get_priority, axis=1
+    )
+
+    if "estimated_savings" in recommendations.columns:
+        recommendations["estimated_savings"] = pd.to_numeric(
+            recommendations["estimated_savings"], errors="coerce"
+        ).fillna(0)
+
+    priority_filter = st.multiselect(
+        "Filter by priority",
+        options=["High", "Medium", "Low"],
+        default=["High", "Medium", "Low"],
+        key="recommendation_priority_filter"
+    )
+
+    filtered_recommendations = recommendations[
+        recommendations["Priority"].isin(priority_filter)
+    ]
+
+    display_columns = [
+        col for col in [
+            "resource_id",
+            "resource_type",
+            "recommendation",
+            "Priority",
+            "estimated_savings"
+        ]
+        if col in filtered_recommendations.columns
+    ]
+
+    st.dataframe(
+        filtered_recommendations[display_columns],
+        width="stretch",
+        hide_index=True
+    )
+
+    if "estimated_savings" in filtered_recommendations.columns:
+        total_recommended_savings = filtered_recommendations[
+            "estimated_savings"
+        ].sum()
+
+        st.metric(
+            "Estimated Savings for Filtered Resources",
+            f"₹{total_recommended_savings:,.0f}"
+        )
+
+    st.caption(
+        "Recommendations are based on sample utilization rules. "
+        "Review resources before making changes."
+    )
+else:
+    st.warning("No recommendation column was found in the analysis results.")
