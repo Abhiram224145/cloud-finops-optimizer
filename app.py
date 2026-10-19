@@ -235,3 +235,68 @@ if all(col in health_data.columns for col in required_columns):
     st.plotly_chart(health_chart, width="stretch")
 else:
     st.warning("Required CPU, memory, or resource ID columns are missing.")
+
+# PDF Report Download
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+)
+from reportlab.lib.styles import getSampleStyleSheet
+
+st.subheader("Download PDF Report")
+
+def create_pdf_report():
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(
+        Paragraph("Cloud FinOps Optimization Report", styles["Title"])
+    )
+    elements.append(Spacer(1, 16))
+    elements.append(
+        Paragraph(
+            "Summary of cloud resource costs and optimization analysis.",
+            styles["Normal"]
+        )
+    )
+    elements.append(Spacer(1, 16))
+
+    pdf_data = [
+        ["Resource ID", "Monthly Cost (Rs.)", "Recommendation"]
+    ]
+
+    for _, row in results.iterrows():
+        pdf_data.append([
+            str(row.get("resource_id", "")),
+            f'{float(row.get("monthly_cost", 0)):,.0f}',
+            str(row.get("recommendation", "Review"))
+        ])
+
+    table = Table(pdf_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#243b53")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1),
+         [colors.white, colors.whitesmoke]),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+pdf_bytes = create_pdf_report()
+
+st.download_button(
+    label="Download PDF Report",
+    data=pdf_bytes,
+    file_name="cloud_finops_report.pdf",
+    mime="application/pdf"
+)
