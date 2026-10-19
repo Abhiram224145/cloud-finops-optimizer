@@ -62,7 +62,7 @@ fig = px.bar(
     }
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 st.subheader("AI/ML Analysis Results")
 
@@ -80,59 +80,158 @@ st.download_button(
     file_name="cloud_finops_report.csv",
     mime="text/csv"
 )
+
+# -------------------------------
 # Cloud Cost Forecasting
+# -------------------------------
+
 st.subheader("Cloud Cost Forecasting")
 
-total_cost = pd.to_numeric(
-    results["monthly_cost"], errors="coerce"
-).fillna(0).sum()
+if "monthly_cost" in results.columns:
+    total_cost = pd.to_numeric(
+        results["monthly_cost"], errors="coerce"
+    ).fillna(0).sum()
 
-growth_rate = st.slider(
-    "Expected monthly cost growth (%)",
-    0, 30, 5,
-    key="forecast_growth"
-)
+    col1, col2 = st.columns(2)
 
-forecast_cost = total_cost * (1 + growth_rate / 100)
+    with col1:
+        st.metric("Current Monthly Cost", f"₹{total_cost:,.0f}")
 
-col1, col2 = st.columns(2)
-col1.metric("Current Monthly Cost", f"₹{total_cost:,.0f}")
-col2.metric("Estimated Next Month Cost", f"₹{forecast_cost:,.0f}")
+    with col2:
+        growth_rate = st.slider(
+            "Expected monthly cost growth (%)",
+            min_value=0,
+            max_value=30,
+            value=5
+        )
 
-forecast_data = pd.DataFrame({
-    "Period": ["Current Month", "Next Month Forecast"],
-    "Cost (₹)": [total_cost, forecast_cost]
-})
+    forecast_cost = total_cost * (1 + growth_rate / 100)
 
-fig_forecast = px.bar(
-    forecast_data,
-    x="Period",
-    y="Cost (₹)",
-    title="Monthly Cloud Cost Forecast"
-)
+    st.metric(
+        "Estimated Next Month Cost",
+        f"₹{forecast_cost:,.0f}",
+        delta=f"₹{forecast_cost - total_cost:,.0f}"
+    )
 
-st.plotly_chart(fig_forecast, width="stretch")
+    forecast_data = pd.DataFrame({
+        "Period": ["Current Month", "Next Month Forecast"],
+        "Cost (₹)": [total_cost, forecast_cost]
+    })
 
-st.caption("This is an illustrative estimate, not a prediction from historical billing data.")
+    fig_forecast = px.bar(
+        forecast_data,
+        x="Period",
+        y="Cost (₹)",
+        title="Monthly Cloud Cost Forecast",
+        text_auto=".2s"
+    )
 
+    st.plotly_chart(fig_forecast, use_container_width=True)
+
+    st.caption(
+        "Forecast is a simple estimate based on your selected growth rate, "
+        "not a prediction from historical billing data."
+    )
+else:
+    st.warning(
+        "The monthly_cost column was not found in the analysis results."
+    )
+
+
+# -------------------------------
 # What-If Savings Simulator
+# -------------------------------
+
 st.subheader("What-If Savings Simulator")
 
-savings_percent = st.slider(
-    "Potential cost reduction (%)",
-    min_value=0,
-    max_value=50,
-    value=20,
-    key="what_if_savings"
-)
+if "monthly_cost" in results.columns:
+    total_cost = pd.to_numeric(
+        results["monthly_cost"], errors="coerce"
+    ).fillna(0).sum()
 
-potential_savings = total_cost * savings_percent / 100
-optimized_cost = total_cost - potential_savings
+    savings_percent = st.slider(
+        "Potential cost reduction (%)",
+        min_value=0,
+        max_value=50,
+        value=20,
+        key="what_if_savings_percent"
+    )
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Current Cost", f"₹{total_cost:,.0f}")
-col2.metric("Potential Savings", f"₹{potential_savings:,.0f}")
-col3.metric("Cost After Optimization", f"₹{optimized_cost:,.0f}")
+    potential_savings = total_cost * savings_percent / 100
+    optimized_cost = total_cost - potential_savings
 
-st.caption("Savings are illustrative estimates, not guaranteed real-world savings.")
+    col1, col2, col3 = st.columns(3)
 
+    col1.metric("Current Cost", f"₹{total_cost:,.0f}")
+    col2.metric("Potential Savings", f"₹{potential_savings:,.0f}")
+    col3.metric("Cost After Optimization", f"₹{optimized_cost:,.0f}")
+
+    st.caption(
+        "Illustrative estimate only. Actual savings depend on "
+        "resource usage and cloud pricing."
+    )
+
+# -------------------------------
+# Resource Health Monitor
+# -------------------------------
+
+st.subheader("Resource Health Monitor")
+
+health_data = results.copy()
+
+required_columns = [
+    "resource_id", "cpu_usage", "memory_usage"
+]
+
+if all(col in health_data.columns for col in required_columns):
+    health_data["cpu_usage"] = pd.to_numeric(
+        health_data["cpu_usage"], errors="coerce"
+    )
+    health_data["memory_usage"] = pd.to_numeric(
+        health_data["memory_usage"], errors="coerce"
+    )
+
+    health_data = health_data.dropna(
+        subset=["cpu_usage", "memory_usage"]
+    )
+
+    def get_health(row):
+        if row["cpu_usage"] < 10 and row["memory_usage"] < 20:
+            return "Underutilized"
+        elif row["cpu_usage"] > 90 or row["memory_usage"] > 90:
+            return "Needs Review"
+        return "Healthy"
+
+    health_data["health_status"] = health_data.apply(
+        get_health, axis=1
+    )
+
+    st.dataframe(
+        health_data[
+            [
+                "resource_id",
+                "cpu_usage",
+                "memory_usage",
+                "health_status"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    health_chart = px.bar(
+        health_data,
+        x="resource_id",
+        y=["cpu_usage", "memory_usage"],
+        barmode="group",
+        title="CPU and Memory Utilization (%)",
+        labels={
+            "resource_id": "Cloud Resource",
+            "value": "Usage (%)",
+            "variable": "Metric"
+        }
+    )
+
+    st.plotly_chart(health_chart, width="stretch")
+else:
+    st.warning("Required CPU, memory, or resource ID columns are missing.")
