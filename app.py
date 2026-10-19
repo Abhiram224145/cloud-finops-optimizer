@@ -80,3 +80,58 @@ st.download_button(
     file_name="cloud_finops_report.csv",
     mime="text/csv"
 )
+# Cloud Cost Forecasting
+st.subheader("Cloud Cost Forecasting")
+
+total_cost = pd.to_numeric(
+    results["monthly_cost"], errors="coerce"
+).fillna(0).sum()
+
+growth_rate = st.slider(
+    "Expected monthly cost growth (%)",
+    0, 30, 5,
+    key="forecast_growth"
+)
+
+forecast_cost = total_cost * (1 + growth_rate / 100)
+
+col1, col2 = st.columns(2)
+col1.metric("Current Monthly Cost", f"₹{total_cost:,.0f}")
+col2.metric("Estimated Next Month Cost", f"₹{forecast_cost:,.0f}")
+
+forecast_data = pd.DataFrame({
+    "Period": ["Current Month", "Next Month Forecast"],
+    "Cost (₹)": [total_cost, forecast_cost]
+})
+
+fig_forecast = px.bar(
+    forecast_data,
+    x="Period",
+    y="Cost (₹)",
+    title="Monthly Cloud Cost Forecast"
+)
+
+st.plotly_chart(fig_forecast, width="stretch")
+
+st.caption("This is an illustrative estimate, not a prediction from historical billing data.")
+
+# What-If Savings Simulator
+st.subheader("What-If Savings Simulator")
+
+savings_percent = st.slider(
+    "Potential cost reduction (%)",
+    min_value=0,
+    max_value=50,
+    value=20,
+    key="what_if_savings"
+)
+
+potential_savings = total_cost * savings_percent / 100
+optimized_cost = total_cost - potential_savings
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Current Cost", f"₹{total_cost:,.0f}")
+col2.metric("Potential Savings", f"₹{potential_savings:,.0f}")
+col3.metric("Cost After Optimization", f"₹{optimized_cost:,.0f}")
+
+st.caption("Savings are illustrative estimates, not guaranteed real-world savings.")
