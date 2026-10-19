@@ -135,3 +135,4 @@ col2.metric("Potential Savings", f"₹{potential_savings:,.0f}")
 col3.metric("Cost After Optimization", f"₹{optimized_cost:,.0f}")
 
 st.caption("Savings are illustrative estimates, not guaranteed real-world savings.")
+
