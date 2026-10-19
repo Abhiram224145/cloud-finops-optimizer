@@ -471,3 +471,41 @@ st.dataframe(
     width="stretch",
     hide_index=True
 )
+
+# Cloud Budget Alert System
+st.subheader("Cloud Budget Alert System")
+
+if "monthly_cost" in results.columns:
+    total_cost = pd.to_numeric(
+        results["monthly_cost"], errors="coerce"
+    ).fillna(0).sum()
+
+    monthly_budget = st.number_input(
+        "Set your monthly cloud budget (₹)",
+        min_value=1000,
+        max_value=10000000,
+        value=60000,
+        step=1000,
+        key="monthly_cloud_budget"
+    )
+
+    budget_used = (total_cost / monthly_budget) * 100
+
+    col1, col2 = st.columns(2)
+    col1.metric("Monthly Budget", f"₹{monthly_budget:,.0f}")
+    col2.metric("Current Sample Cost", f"₹{total_cost:,.0f}")
+
+    st.progress(min(budget_used / 100, 1.0))
+    st.write(f"Budget used: **{budget_used:.1f}%**")
+
+    if total_cost > monthly_budget:
+        st.error("Budget exceeded! Review your cloud resources.")
+    elif budget_used >= 80:
+        st.warning("Budget alert: spending has reached at least 80%.")
+    else:
+        st.success("Spending is currently within your budget.")
+
+    st.caption(
+        "This alert uses the costs in your uploaded CSV. "
+        "It is not connected to live cloud billing."
+    )
